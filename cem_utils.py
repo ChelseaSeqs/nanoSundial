@@ -73,9 +73,13 @@ def identify_file_path(file_path):
 
 
 def generate_bam_file(fastq_file, reference, cpu,output,subsample_ratio=1):
+    os.makedirs(output, exist_ok=True)
+    
+    # Ensure use of only file name not entire path
+    fastq_base = os.path.basename(fastq_file)
+    fastq_stem = os.path.splitext(fastq_base)[0]
 
-
-    bam_file = output+'/' + '.'.join(fastq_file.split('.')[:-1]) + '_aligned.bam'
+    bam_file = os.path.join(output, fastq_stem + '_aligned.bam')
 
     if not os.path.exists(bam_file):
         cmds = 'minimap2 -ax map-ont -t ' + cpu + ' --MD --secondary=no ' + reference + ' ' + fastq_file + ' | samtools view -hbS -F ' + str(
@@ -87,7 +91,7 @@ def generate_bam_file(fastq_file, reference, cpu,output,subsample_ratio=1):
         print(bam_file + ' existed. Will skip the minimap2 ... ')
 
     if subsample_ratio < 1:
-        new_bam = output+'/' +'.'.join(bam_file.split('.')[:-1]) + '_sub.bam'
+        new_bam = os.path.join(output, fastq_stem + '_aligned_sub.bam')
         if not os.path.exists(new_bam):
             cmds = "samtools view -hbS -s " +str(subsample_ratio) +' ' + bam_file +' > ' + new_bam
             run_cmd(cmds)
@@ -99,7 +103,7 @@ def generate_bam_file(fastq_file, reference, cpu,output,subsample_ratio=1):
         cmds = 'samtools index ' + bam_file
         run_cmd(cmds)
 
-    new_fastq_file = '.'.join(bam_file.split('.')[:-1]) + '.fastq'
+    new_fastq_file = os.path.splitext(bam_file)[0] + '.fastq'
     if not os.path.exists(new_fastq_file):
         cmds = 'samtools bam2fq ' + bam_file + ' > '+ new_fastq_file
         run_cmd(cmds)
@@ -175,7 +179,7 @@ def run_samtools(fastq_file, location, reference, result_path, group, cpu):
 
 def build_out_path(results_path):
     if not os.path.exists(results_path):
-        os.mkdir(results_path)
+        os.makedirs(results_path, exist_ok=True)
     else:
         print("Output file existed! It will be overwrite or add content after 5 secs ...")
         time.sleep(5)
